@@ -1,6 +1,8 @@
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
+import { getString, initLocale } from "./utils/locale";
+import PDFAnnotationSharing from "./modules/pdfAnnotationSharing";
 
 const basicTool = new BasicTool();
 
@@ -21,3 +23,22 @@ function defineGlobal(name: string, getter?: () => any) {
     },
   });
 }
+
+class Addon {
+  private pdfAnnotationSharing: PDFAnnotationSharing;
+
+  constructor(public Zotero: _ZoteroTypes.Zotero) {
+    this.pdfAnnotationSharing = new PDFAnnotationSharing(Zotero);
+  }
+
+  public async init() {
+    await initLocale();
+    await this.pdfAnnotationSharing.init();
+
+    Zotero.debug(`${config.addonName}: Init complete`);
+  }
+
+  // 其他必要的方法...
+}
+
+export default Addon;
