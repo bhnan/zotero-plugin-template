@@ -1,0 +1,32 @@
+.cloud-annotation-popup {
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  max-width: 300px;
+  font-size: 14px;
+}
+
+.cloud-annotation-popup h3 {
+  margin-top: 0;
+  color: #0000FF;
+  font-size: 16px;
+}
+
+.cloud-annotation-popup p {
+  margin: 5px 0;
+}
+
+.cloud-annotation-popup .close-popup {
+  float: right;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  border: none;
+  padding: 5px 10px;
+  margin-top: 10px;
+}
+
+.cloud-annotation-popup .close-popup:hover {
+  background-color: #e0e0e0;
+}
+

@@ -1,10 +1,23 @@
-import { ZoteroToolkit } from "zotero-plugin-toolkit";
+import {
+  BasicTool,
+  UITool,
+  ExtraFieldTool,
+  FieldHookManager,
+  KeyboardManager,
+  MenuManager,
+  PromptManager,
+  DialogHelper,
+  ProgressWindowHelper,
+  ClipboardHelper,
+  makeHelperTool,
+  unregister,
+} from "zotero-plugin-toolkit";
 import { config } from "../../package.json";
 
 export { createZToolkit };
 
 function createZToolkit() {
-  const _ztoolkit = new ZoteroToolkit();
+  const _ztoolkit = new MyToolkit();
   /**
    * Alternatively, import toolkit modules you use to minify the plugin size.
    * You can add the modules under the `MyToolkit` class below and uncomment the following line.
@@ -29,18 +42,39 @@ function initZToolkit(_ztoolkit: ReturnType<typeof createZToolkit>) {
   );
 }
 
-import { BasicTool, unregister } from "zotero-plugin-toolkit";
-import { UITool } from "zotero-plugin-toolkit";
-
-class MyToolkit extends BasicTool {
+export class MyToolkit extends BasicTool {
   UI: UITool;
+  ExtraField: ExtraFieldTool;
+  FieldHook: FieldHookManager;
+  Keyboard: KeyboardManager;
+  Menu: MenuManager;
+  Prompt: PromptManager;
+  Dialog: typeof DialogHelper;
+  ProgressWindow: typeof ProgressWindowHelper;
+  Clipboard: typeof ClipboardHelper;
 
   constructor() {
     super();
     this.UI = new UITool(this);
+    this.ExtraField = new ExtraFieldTool(this);
+    this.FieldHook = new FieldHookManager(this);
+    this.Keyboard = new KeyboardManager(this);
+    this.Menu = new MenuManager(this);
+    this.Prompt = new PromptManager(this);
+    this.Dialog = makeHelperTool(DialogHelper, this);
+    this.ProgressWindow = makeHelperTool(ProgressWindowHelper, this);
+    this.Clipboard = makeHelperTool(ClipboardHelper, this);
   }
 
   unregisterAll() {
     unregister(this);
+  }
+
+  // 添加 showErrorMessage 方法
+  showErrorMessage(message: string) {
+    const progressWindow = new this.ProgressWindow("Error");
+    progressWindow.addLines(message, "error");
+    progressWindow.show();
+    progressWindow.startCloseTimer(5000); // 5秒后自动关闭
   }
 }
