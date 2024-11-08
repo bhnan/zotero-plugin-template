@@ -49,6 +49,20 @@ export class BasicExampleFactory {
         this.unregisterNotifier(notifierID);
       },
     });
+
+    // 添加主菜单
+    ztoolkit.MenuManager.createMenu(
+      "menuAnnotation", 
+      "获取注释",
+      {
+        tag: "menuitem",
+        label: "获取当前PDF注释",
+        commandListener: (e) => {
+          // 调用getAnnotations方法
+          AnnotationExampleFactory.getAnnotations();
+        }
+      }
+    );
   }
 
   @example
@@ -847,3 +861,407 @@ export class HelperExampleFactory {
     ztoolkit.getGlobal("alert")("See src/modules/preferenceScript.ts");
   }
 }
+
+export class AnnotationExampleFactory {
+  @example
+  static async getAnnotations() {
+    try {
+      // 获取当前阅读器的父条目ID
+      const parentItemId = this.getReaderParentId();
+      if (!parentItemId) {
+        new ztoolkit.ProgressWindow(config.addonName)
+          .createLine({
+            text: "未找到当前PDF文件！",
+            type: "error",
+          })
+          .show()
+          .startCloseTimer(3000);
+        return;
+      }
+
+      // 获取当前条目
+      const item = await Zotero.Items.getAsync(parentItemId);
+      if (!item) {
+        new ztoolkit.ProgressWindow(config.addonName)
+          .createLine({
+            text: "���法获取当前条目信息！",
+            type: "error",
+          })
+          .show()
+          .startCloseTimer(3000);
+        return;
+      }
+
+      // 获取PDF阅读器实例
+      const reader = Zotero.Reader.getByTabID(Zotero_Tabs.selectedID);
+      if (!reader) {
+        new ztoolkit.ProgressWindow(config.addonName)
+          .createLine({
+            text: "无法获取PDF阅读器实例！",
+            type: "error",
+          })
+          .show()
+          .startCloseTimer(3000);
+        return;
+      }
+
+      // 获取注释管理器
+      const annotationManager = reader._annotationManager;
+      if (!annotationManager) {
+        new ztoolkit.ProgressWindow(config.addonName)
+          .createLine({
+            text: "无法获取注释管理器！",
+            type: "error",
+          })
+          .show()
+          .startCloseTimer(3000);
+        return;
+      }
+
+      // 获取注释
+      const annotations = annotationManager._annotations;
+      if (!annotations.length) {
+        new ztoolkit.ProgressWindow(config.addonName)
+          .createLine({
+            text: "当前PDF没有注释！",
+            type: "warning",
+          })
+          .show()
+          .startCloseTimer(3000);
+        return;
+      }
+
+      // 遍历注释并输出信息
+      annotations.forEach((annotation: any, index: number) => {
+        ztoolkit.log(`注释 ${index + 1}:`);
+        ztoolkit.log("- ID:", annotation.id);
+        ztoolkit.log("- 类型:", annotation.type);
+        ztoolkit.log("- 颜色:", annotation.color);
+        ztoolkit.log("- 文本:", annotation.text);
+        ztoolkit.log("- 页码:", annotation.pageLabel);
+        ztoolkit.log("- 评论:", annotation.comment);
+        ztoolkit.log("- 作者:", annotation.author);
+        ztoolkit.log("- 位置:", annotation.position);
+        ztoolkit.log("- 添加时间:", new Date(annotation.dateModified).toLocaleString());
+        ztoolkit.log("------------------------");
+      });
+
+      // 显示成功信息
+      new ztoolkit.ProgressWindow(config.addonName)
+        .createLine({
+          text: `已获取 ${annotations.length} 条注释`,
+          type: "success",
+        })
+        .createLine({
+          text: "详细信息请查看调试日志",
+          type: "default",
+        })
+        .show()
+        .startCloseTimer(3000);
+
+    } catch (error) {
+      ztoolkit.log("获取注释时出错:", error);
+      throw error; // 向上抛出错误，让onNotify处理
+    }
+  }
+
+  static getReaderParentId() {
+    const currentReader = Zotero.Reader.getByTabID(Zotero_Tabs.selectedID);
+    const parentItemId = Zotero.Items.get(
+      currentReader?.itemID || -1,
+    ).parentItemID;
+    return parentItemId;
+  }
+
+  @example
+  static async showCloudAnnotations() {
+    try {
+      ztoolkit.log("开始显示云端注释");
+      
+      const reader = Zotero.Reader.getByTabID(Zotero_Tabs.selectedID);
+      if (!reader) {
+        ztoolkit.log("错误：未找到PDF阅读器实例");
+        return;
+      }
+      ztoolkit.log("成功获取PDF阅读器实例");
+
+      // 获取 PDF.js 实例
+      const pdfViewer = reader._primaryView?._iframeWindow?.PDFViewerApplication?.pdfViewer;
+      if (!pdfViewer) {
+        ztoolkit.log("错误：未找到PDF查看器实例");
+        return;
+      }
+      ztoolkit.log("成功获取PDF查看器实例");
+
+      // 获取 PDF 对应的 document
+      const pdfDocument = pdfViewer.container?.ownerDocument;
+      if (!pdfDocument) {
+        ztoolkit.log("错误：未找到PDF文档");
+        return;
+      }
+      ztoolkit.log("成功获取PDF文档");
+
+      // 检查页面视图是否可用
+      const pageView = pdfViewer.getPageView(0);
+      if (!pageView) {
+        ztoolkit.log("错误：未找到页面视图");
+        return;
+      }
+      ztoolkit.log("成功获取页面视图");
+
+      // 模拟云端注释数据
+      const cloudAnnotations = [
+        {
+          pageIndex: 0,
+          rects: [[50, 50, 200, 70]],
+          text: "这是第一条云端注释",
+          author: "用户A",
+          dateAdded: new Date().toISOString(),
+          color: "rgba(255, 0, 0, 0.8)" // 半透明浅粉色
+        }
+      ];
+      ztoolkit.log(`找到 ${cloudAnnotations.length} 条云端注释`);
+
+      // 遍历注释前检查数组
+      if (!Array.isArray(cloudAnnotations)) {
+        ztoolkit.log("错误：注释数据不是数组格式");
+        return;
+      }
+
+      // 为每个注释创建可视化效果
+      for (const annotation of cloudAnnotations) {
+        ztoolkit.log(`处理注释：${JSON.stringify(annotation)}`);
+        
+        try {
+          const canvas = this.createAnnotationLayer(annotation.pageIndex);
+          if (!canvas) {
+            ztoolkit.log(`警告：无法为页面 ${annotation.pageIndex} 创建注释层`);
+            continue;
+          }
+          ztoolkit.log(`成功为页面 ${annotation.pageIndex} 创建注释层`);
+
+          const page = pdfViewer.getPageView(annotation.pageIndex);
+          if (!page) {
+            ztoolkit.log(`警告：无法找到页面 ${annotation.pageIndex}`);
+            continue;
+          }
+
+          // 检查 rects 是否为数组
+          if (!Array.isArray(annotation.rects)) {
+            ztoolkit.log(`警告：注释 rects 不是数组格式`);
+            continue;
+          }
+
+          // 绘制所有矩形区域
+          annotation.rects.forEach((rect, index) => {
+            ztoolkit.log(`绘制第 ${index + 1} 个矩形区域：${JSON.stringify(rect)}`);
+            this.drawUnderline(canvas, rect, annotation.color);
+            this.addClickHandler(page.div, rect, annotation);
+          });
+        } catch (err) {
+          ztoolkit.log(`处理注释时出错：${err.message}`);
+        }
+      }
+
+      ztoolkit.log("云端注释显示完成");
+
+    } catch (error) {
+      ztoolkit.log("显示云端注释时出错:", error);
+      // 显示错误提示
+      new ztoolkit.ProgressWindow(config.addonName)
+        .createLine({
+          text: `显示云端注释时出错: ${error.message}`,
+          type: "error",
+        })
+        .show()
+        .startCloseTimer(3000);
+    }
+  }
+
+  // 将函数改为静态方法
+  private static createAnnotationLayer(pageIndex: number) {
+    try {
+      ztoolkit.log(`开始为页面 ${pageIndex} 创建注释层`);
+      const reader = Zotero.Reader.getByTabID(Zotero_Tabs.selectedID);
+      if (!reader) {
+        ztoolkit.log("错误：创建注释层时未找到阅读器实例");
+        return null;
+      }
+
+      const pdfViewer = reader._primaryView?._iframeWindow?.PDFViewerApplication?.pdfViewer;
+      if (!pdfViewer) {
+        ztoolkit.log("错误：创建注释层时未找到PDF查看器");
+        return null;
+      }
+
+      const page = pdfViewer.getPageView(pageIndex);
+      if (!page) {
+        ztoolkit.log(`错误：未找到页面 ${pageIndex}`);
+        return null;
+      }
+
+      const pdfDocument = pdfViewer.container?.ownerDocument;
+      if (!pdfDocument) {
+        ztoolkit.log("错误：未找到PDF文档");
+        return null;
+      }
+
+      // 创建 canvas
+      const canvas = pdfDocument.createElement('canvas');
+      const viewport = page.viewport;
+      
+      // 设置 canvas 尺寸和样式
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.pointerEvents = 'none';
+      // 添加重要的样式
+      canvas.style.zIndex = '1'; // 确保在PDF内容之上
+      canvas.style.mixBlendMode = 'multiply'; // 更好的混合效果
+      canvas.style.opacity = '1'; // 确保可见
+      
+      // 获取正确的容器
+      const pageDiv = page.div;
+      if (!pageDiv) {
+        ztoolkit.log("错误：未找到页面DIV元素");
+        return null;
+      }
+
+      // 找到正确的插入位置（通常是注释层）
+      const annotationLayer = pageDiv.querySelector('.annotationLayer');
+      if (annotationLayer) {
+        // 插入到注释层之前
+        annotationLayer.parentNode?.insertBefore(canvas, annotationLayer);
+        ztoolkit.log('Canvas插入到注释层之前');
+      } else {
+        // 如果找不到注释层，就追加到页面div
+        pageDiv.appendChild(canvas);
+        ztoolkit.log('Canvas追加到页面div');
+      }
+
+      ztoolkit.log(`成功创建并添加注释层到页面 ${pageIndex}`);
+      ztoolkit.log('Canvas尺寸:', { width: canvas.width, height: canvas.height });
+      ztoolkit.log('Canvas位置:', { top: canvas.style.top, left: canvas.style.left });
+      
+      return canvas;
+    } catch (error) {
+      ztoolkit.log(`创建注释层时出错: ${error.message}`);
+      return null;
+    }
+  }
+
+  private static drawUnderline(canvas: HTMLCanvasElement, rect: number[], color: string) {
+    try {
+      ztoolkit.log('开始绘制下划线');
+      ztoolkit.log('原始rect数据:', JSON.stringify(rect));
+      
+      // 确保 rect 是数组
+      if (!Array.isArray(rect)) {
+        // 如果是类数组对象，转换为数组
+        rect = [rect[0], rect[1], rect[2], rect[3]];
+      }
+      
+      // 使用 Array.from 显式转换
+      const coordinates = Array.from(rect, num => Number(num) || 0);
+      const x1 = coordinates[0];
+      const y1 = coordinates[1];
+      const x2 = coordinates[2];
+      const y2 = coordinates[3];
+      
+      ztoolkit.log(`处理后的坐标: x1=${x1}, y1=${y1}, x2=${x2}, y2=${y2}`);
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        ztoolkit.log('错误：无法获取canvas上下文');
+        return;
+      }
+
+      ztoolkit.log('设置绘制颜色');
+      // 设置绘制样式
+      ctx.strokeStyle = color || '#FFB6C1';
+      ztoolkit.log('设置绘制宽度');
+      ctx.lineWidth = 2;
+
+      ztoolkit.log('开始绘制');
+      // 绘制
+      ctx.beginPath();
+      ztoolkit.log('开始移动');
+      ctx.moveTo(x1, y2 + 2);
+      ztoolkit.log('开始绘制线条');
+      ctx.lineTo(x2, y2 + 2);
+      ztoolkit.log('开始绘制');
+      ctx.stroke();
+      ztoolkit.log('绘制完成');
+
+      ztoolkit.log('下划线绘制完成');
+    } catch (error) {
+      ztoolkit.log(`绘制下划线时出错: ${error.message}`);
+    }
+  }
+
+  private static addClickHandler(
+    pageDiv: HTMLElement, 
+    rect: number[], 
+    annotation: { text: string; author: string; dateAdded: string }
+  ) {
+    try {
+      ztoolkit.log(`添加点击处理器，位置：${JSON.stringify(rect)}`);
+
+      // 创建点击区域
+      const clickArea = pageDiv.ownerDocument.createElement('div');
+      
+      // 设置样式
+      Object.assign(clickArea.style, {
+        position: 'absolute',
+        left: `${rect[0]}px`,
+        top: `${rect[1]}px`,
+        width: `${rect[2] - rect[0]}px`,
+        height: `${rect[3] - rect[1]}px`,
+        cursor: 'pointer',
+        zIndex: '2', // 确保在canvas上层
+        backgroundColor: 'transparent',
+        pointerEvents: 'auto' // 允许点击事件
+      });
+
+      // 添加点击事件
+      clickArea.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        ztoolkit.log('注释被点击');
+        
+        // 显示注释信息
+        new ztoolkit.ProgressWindow("云端注释")
+          .createLine({
+            text: `注释内容: ${annotation.text}`,
+            type: "default",
+          })
+          .createLine({
+            text: `作者: ${annotation.author}`,
+            type: "default",
+          })
+          .createLine({
+            text: `时间: ${new Date(annotation.dateAdded).toLocaleString()}`,
+            type: "default",
+          })
+          .show()
+          .startCloseTimer(5000);
+      });
+
+      // 添加悬停效果
+      clickArea.addEventListener('mouseover', () => {
+        clickArea.style.backgroundColor = 'rgba(255, 255, 0, 0.1)'; // 淡黄色背景
+      });
+
+      clickArea.addEventListener('mouseout', () => {
+        clickArea.style.backgroundColor = 'transparent';
+      });
+
+      pageDiv.appendChild(clickArea);
+      ztoolkit.log('点击处理器添加完成');
+    } catch (error) {
+      ztoolkit.log(`添加点击处理器时出错: ${error.message}`);
+    }
+  }
+}
+

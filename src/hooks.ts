@@ -4,6 +4,7 @@ import {
   KeyExampleFactory,
   PromptExampleFactory,
   UIExampleFactory,
+  AnnotationExampleFactory,
 } from "./modules/examples";
 import { config } from "../package.json";
 import { getString, initLocale } from "./utils/locale";
@@ -110,16 +111,54 @@ async function onNotify(
   ids: Array<string | number>,
   extraData: { [key: string]: any },
 ) {
-  // You can add your code to the corresponding notify type
   ztoolkit.log("notify", event, type, ids, extraData);
+  
+  // 当打开阅读器标签页时
   if (
-    event == "select" &&
-    type == "tab" &&
-    extraData[ids[0]].type == "reader"
+    event === "select" &&
+    type === "tab" &&
+    extraData[ids[0]].type === "reader"
   ) {
-    BasicExampleFactory.exampleNotifierCallback();
-  } else {
-    return;
+    try {
+      // 等待一小段时间确保阅读器完全加载
+      await Zotero.Promise.delay(1000);
+      
+      // 显示开始加载的提示
+      const progressWin = new ztoolkit.ProgressWindow(config.addonName)
+        .createLine({
+          text: "正在加载PDF注释...",
+          type: "default",
+          progress: 0
+        })
+        .show();
+
+      // 依次调用两个函数
+      await Promise.all([
+        AnnotationExampleFactory.getAnnotations(),
+        AnnotationExampleFactory.showCloudAnnotations()
+      ]);
+
+      // 更新进度窗口显示完成信息
+      progressWin
+        .changeLine({
+          text: "PDF注释加载完成！",
+          type: "success",
+          progress: 100
+        })
+        .startCloseTimer(3000);
+
+    } catch (error) {
+      // 如果发生错误，显示错误提示
+      new ztoolkit.ProgressWindow(config.addonName)
+        .createLine({
+          text: "加载PDF注释失败！",
+          type: "error",
+        })
+        .show()
+        .startCloseTimer(3000);
+      
+      ztoolkit.log("加载注释时出错:", error);
+    }
   }
 }
 
